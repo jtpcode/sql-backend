@@ -140,3 +140,4 @@ vite.config.ts.timestamp-*
 
 # Sql data
 postgres_data/
+rest-client/

@@ -9,6 +9,12 @@ const blogsRouter = require('./controllers/blogs')
 app.use(express.json())
 app.use('/api/blogs', blogsRouter)
 
+// Virheenkäsittely
+app.use((err, req, res, next) => {
+  console.error(err)
+  res.status(500).json({ error: err.message })
+})
+
 const start = async () => {
   await connectToDatabase()
   app.listen(PORT, () => {
