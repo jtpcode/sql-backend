@@ -24,6 +24,11 @@ const blogFinder = async (req, res, next) => {
   next()
 }
 
+const userFinder = async (req, res, next) => {
+  req.user = await User.findByPk(req.decodedToken.id)
+  next()
+}
+
 router.get('/', async (req, res) => {
   const blogs = await Blog.findAll({
     attributes: { exclude: ['userId'] },
@@ -37,9 +42,8 @@ router.get('/', async (req, res) => {
   res.json(blogs)
 })
 
-router.post('/', tokenExtractor, async (req, res) => {
-  const user = await User.findByPk(req.decodedToken.id)
-  const blog = await Blog.create({...req.body, userId: user.id})
+router.post('/', tokenExtractor, userFinder, async (req, res) => {
+  const blog = await Blog.create({...req.body, userId: req.user.id})
 
   res.json(blog)
 })
@@ -54,11 +58,15 @@ router.get('/:id', blogFinder, async (req, res) => {
   }
 })
 
-router.delete('/:id', blogFinder, async (req, res) => {
+router.delete('/:id', blogFinder, tokenExtractor, userFinder, async (req, res) => {
   const blog = req.blog
   if (blog) {
-    await blog.destroy()
-    res.status(204).end()
+    if (blog.userId === req.user.id) {
+      await blog.destroy()
+      res.status(204).end()
+    } else {
+      return res.status(403).json({ error: 'forbidden: user cannot delete this blog' })
+    }
   } else {
     res.status(404).end()
   }
