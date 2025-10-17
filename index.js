@@ -16,6 +16,11 @@ app.use('/api/login', loginRouter)
 // Virheenkäsittely: express versio 5+ automaattisesti käsittelee async/await virheet
 app.use((err, req, res, next) => {
   console.error(err)
+
+  if (err.message === 'Validation error: Validation isEmail on username failed') {
+    return res.status(400).json({ error: 'Invalid email format for username' })
+  }
+
   res.status(500).json({ error: err.message })
 })
 
