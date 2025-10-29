@@ -30,13 +30,25 @@ router.post('/', async (req, res) => {
 })
 
 router.get('/:id', async (req, res) => {
+  const { read } = req.query
+
+  let readingListWhere = {}
+  if (read === 'true') {
+    readingListWhere.read = true
+  } else if (read === 'false') {
+    readingListWhere.read = false
+  }
+
   const user = await User.findByPk(req.params.id, {
     attributes: ['name', 'username'],
     include: {
       model: Blog,
       as: 'readings',
       attributes: ['id', 'url', 'title', 'author', 'likes', 'year'],
-      through: { attributes: [] },
+      through: {
+        attributes: [],
+        where: Object.keys(readingListWhere).length ? readingListWhere : undefined
+      },
       include: {
         model: ReadingList,
         attributes: ['read', 'id']
@@ -48,6 +60,7 @@ router.get('/:id', async (req, res) => {
   }
   res.json(user)
 })
+
 
 // Username vaihtaminen
 router.put('/:username', async (req, res) => {
