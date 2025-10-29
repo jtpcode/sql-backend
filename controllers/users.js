@@ -36,7 +36,11 @@ router.get('/:id', async (req, res) => {
       model: Blog,
       as: 'readings',
       attributes: ['id', 'url', 'title', 'author', 'likes', 'year'],
-      through: { attributes: [] }
+      through: { attributes: [] },
+      include: {
+        model: ReadingList,
+        attributes: ['read', 'id']
+      }
     }
   })
   if (!user) {

@@ -13,6 +13,19 @@ const sequelize = new Sequelize(DATABASE_URL)
 //   },
 // })
 
+const connectToDatabase = async () => {
+  try {
+    await sequelize.authenticate()
+    await runMigrations()
+    console.log('database connected')
+  } catch (err) {
+    console.log('connecting database failed')
+    return process.exit(1)
+  }
+
+  return null
+}
+
 const migrationConf = {
   migrations: {
     glob: 'migrations/*.js',
@@ -30,17 +43,11 @@ const runMigrations = async () => {
   })
 }
 
-const connectToDatabase = async () => {
-  try {
-    await sequelize.authenticate()
-    await runMigrations()
-    console.log('database connected')
-  } catch (err) {
-    console.log('connecting database failed')
-    return process.exit(1)
-  }
-
-  return null
+const rollbackMigration = async () => {
+  await sequelize.authenticate()
+  const migrator = new Umzug(migrationConf)
+  await migrator.down()
 }
 
-module.exports = { connectToDatabase, sequelize }
+
+module.exports = { connectToDatabase, sequelize, rollbackMigration }
