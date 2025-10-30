@@ -1,30 +1,65 @@
 const jwt = require('jsonwebtoken')
+const crypto = require('crypto')
 const { SECRET } = require('../util/config')
-const { Blog, User } = require('../models')
+const { Blog, User, Session } = require('../models')
 
-const tokenExtractor = (req, res, next) => {
+const tokenExtractor = async (req, res, next) => {
   const authorization = req.get('authorization')
+  
   if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
+    const token = authorization.substring(7)
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
+    
     try {
-      console.log(authorization.substring(7))
-      req.decodedToken = jwt.verify(authorization.substring(7), SECRET)
-    } catch (error){
-      console.log(error)
+      const decodedToken = jwt.verify(token, SECRET)
+      
+      const session = await Session.findOne({
+        where: { tokenHash },
+        include: {
+          model: User,
+          attributes: ['id', 'username', 'disabled']
+        }
+      })
+      
+      if (!session || session.expiresAt < new Date()) {
+        return res.status(401).json({ error: 'token expired or invalid' })
+      }
+      
+      if (session.user.disabled) {
+        return res.status(401).json({ error: 'account disabled' })
+      }
+      
+      req.decodedToken = decodedToken
+      req.session = session
+      
+    } catch (error) {
+      console.log('Error in tokenExtractor:', error.message)
       return res.status(401).json({ error: 'token invalid' })
     }
   } else {
     return res.status(401).json({ error: 'token missing' })
   }
+
   next()
 }
 
 const blogFinder = async (req, res, next) => {
   req.blog = await Blog.findByPk(req.params.id)
+
+  if (!req.blog) {
+    return res.status(404).json({ error: 'blog not found' })
+  }
+
   next()
 }
 
 const userFinder = async (req, res, next) => {
   req.user = await User.findByPk(req.decodedToken.id)
+
+  if (!req.user) {
+    return res.status(401).json({ error: 'token missing or invalid' })
+  }
+
   next()
 }
 
